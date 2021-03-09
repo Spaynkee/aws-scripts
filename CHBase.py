@@ -3,7 +3,7 @@ import boto3
 import time
 
 class CHBase():
-    ami = "ami-09246ddb00c7c4fef" # linux-2 64bit Might parameterize this later idk
+    ami = "ami-09246ddb00c7c4fef" # linux-2 64bit Might parameterize this later
     iam = boto3.client('iam')
     ec2res = boto3.resource("ec2")
     ec2client = boto3.client("ec2")

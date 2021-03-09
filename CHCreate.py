@@ -2,7 +2,6 @@ from CHBase import CHBase
 from botocore.exceptions import ClientError
 import time
 
-# need to wrap all the actual API calls in a try-catch, with appropriate catches to retry if the resource already exists, or if the resource doesn't yet exist.
 class CHCreate(CHBase):
     def __init__(self):
         CHBase.__init__(self)
