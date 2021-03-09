@@ -39,13 +39,20 @@ class CHCreate(CHBase):
 
 
     @classmethod
-    def create_instance(cls, key_pair_name, prof_name, name):
+    def create_instance(cls, key_pair_name, prof_name, name, user_data_file=None):
         print("Creating Instance")
+        if user_data_file:
+            user_data =  open("user-data/" + user_data_file, "r").read()
+        else:
+            user_data = ""
+
         try:
+            # need to specify a security group that enables ssh from my cpu.
             instances = cls.ec2res.create_instances(ImageId=cls.ami, MinCount=1, MaxCount=1,\
                     InstanceType="t2.micro",\
                     KeyName=key_pair_name,\
                     IamInstanceProfile={"Name": prof_name},\
+                    UserData=user_data,
                     TagSpecifications=[{\
                                     "ResourceType": "instance",
                                     "Tags":[{\
@@ -71,7 +78,15 @@ class CHCreate(CHBase):
     def create_instance_key_pair(cls, name):
         print("Creating key pair for instance.")
         try:
-            cls.ec2client.create_key_pair(KeyName=name)
+            keypair = cls.ec2client.create_key_pair(KeyName=name)
+
+            # This only works for my file path, currently.
+            private_key_file = open(f"/Users/paul/.ssh/{name}.pem","w")
+            # might want to chmod 400 here too, if we can?
+
+            private_key_file.write(keypair['KeyMaterial'])
+            private_key_file.close
+
         except ClientError as e:
             # Populate here with the correct errors. Can't make because of missing key/prof/whatever
             if e.response['Error']['Code'] == "EntityAlreadyExists":
