@@ -1,5 +1,7 @@
 from CHBase import CHBase
 from botocore.exceptions import ClientError
+import time
+import os
 
 class CHDelete(CHBase):
     def __init__(self):
@@ -37,18 +39,23 @@ class CHDelete(CHBase):
         print("Deleting key pair for instance.")
         try:
             cls.ec2client.delete_key_pair(KeyName=name)
+            os.remove(f"/Users/paul/.ssh/{name}.pem")
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("Instance key pair didn't exist, skip for now.")
             else:
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
-        print("Deleted key pair.")
+        except FileNotFoundError as e:
+            print("File didn't exist, so we couldn't delete it")
+
+        print("Deleted key pair and .pem file.")
         return
 
     @classmethod
     def destroy_instance(cls, name):
         # We have to get a list of instances, and get the right id so we can terminate.
+        # might want to see if any instances exist at all, and if not then just skip this.
         instance_id = cls.get_instance_id(name, 'running')
 
         print(f"Terminating Instance '{instance_id}'")
@@ -66,4 +73,23 @@ class CHDelete(CHBase):
         print("Terminated Instance")
         return
 
-
+    @classmethod
+    def destroy_security_group(cls, name):
+        # This fails if the instance is still running. Have to make sure the instance is terminated first.
+        print(f"Deleting security group {name}")
+        try:
+            cls.ec2client.delete_security_group(GroupName=name)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "InvalidGroup.NotFound":
+                print(f"Security group {name} didn't exist, skip for now.")
+            elif e.response['Error']['Code'] == "DependencyViolation":
+                print(f"Security group in use by instance. Maybe it hasn't terminated yet?")
+                print("\nWe'll wait a bit and try again")
+                # we should wait a couple seconds and try again.
+                time.sleep(5)
+                cls.destroy_security_group(name)
+            else:
+                print(f"Unhandled error: {e.response['Error']['Code']}")
+            return
+        print("Deleted security group.")
+        return
