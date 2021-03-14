@@ -15,11 +15,60 @@ class CHDelete(CHBase):
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("Instance role didn't exist, skip for now.")
+            elif e.response['Error']['Code'] == "DeleteConflict":
+                print("Role still has policies attached. Remove those and try again.")
             else:
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
 
         print(f"Destroyed role")
+
+    @classmethod
+    def detach_role_policy(cls, role_name, policy_arn):
+        print("removing policy from role.")
+
+        try:
+            response = cls.iam.detach_role_policy(RoleName=role_name,PolicyArn=policy_arn)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchEntity":
+                print("---Policy already removed? skip for now.---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']['Code']}---")
+
+            return
+
+        print(f"Removed {policy_arn} from {role_name}")
+
+    @classmethod
+    def remove_role_from_instance_profile(cls, instance_prof_name, role_name):
+        print(f"removing {role_name} from {instance_prof_name}")
+
+        try:
+            res = cls.iam.remove_role_from_instance_profile(InstanceProfileName=instance_prof_name,\
+                    RoleName=role_name)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchEntity":
+                print("---Role not attached to profile? skip for now.---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']['Code']}---")
+
+            return
+
+        print(f"Removed {role_name} from {instance_prof_name}")
+
+    @classmethod
+    def destroy_policy(cls, policy_arn):
+        print(f"Deleting policy {policy_arn}")
+        try:
+            response = cls.iam.delete_policy(PolicyArn=policy_arn)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchEntity":
+                print("Policy didn't exist, skip for now.")
+            else:
+                print(f"Unhandled error: {e.response['Error']['Code']}")
+            return
+
+        print(f"Destroyed policy")
 
     @classmethod
     def destroy_instance_profile(cls, name):

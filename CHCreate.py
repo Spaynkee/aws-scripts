@@ -8,9 +8,9 @@ class CHCreate(CHBase):
         CHBase.__init__(self)
 
     @classmethod
-    def create_role(cls, name):
-        print("creating role")
-        role_json = open("iam-policy/instance-role.json", "r").read()
+    def create_role(cls, name, json_file):
+        print(f"creating role {name}")
+        role_json = open(f"iam-roles/{json_file}", "r").read()
 
         try:
             response = cls.iam.create_role(RoleName=name,AssumeRolePolicyDocument=role_json)
@@ -23,6 +23,57 @@ class CHCreate(CHBase):
             return
 
         print(f"Created role {response['Role']['RoleName']}")
+
+    @classmethod
+    def create_policy(cls, policy_name, json_file):
+        print("creating policy")
+        policy_json = open(f"iam-policies/{json_file}", "r").read()
+
+        try:
+            response = cls.iam.create_policy(PolicyName=policy_name,PolicyDocument=policy_json)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "EntityAlreadyExists":
+                print("---Policy already exists, skip for now.---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']['Code']}---")
+
+            return
+
+        print(f"Created role {response['Policy']['PolicyName']}")
+
+
+    @classmethod
+    def attach_role_policy(cls, role_name, policy_arn):
+        print("attaching policy to role.")
+
+        try:
+            response = cls.iam.attach_role_policy(RoleName=role_name,PolicyArn=policy_arn)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "":
+                print("---Policy already attached? skip for now.---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']['Code']}---")
+
+            return
+
+        print(f"Attached {policy_arn} to {role_name}")
+
+    @classmethod
+    def add_role_to_instance_profile(cls, instance_prof_name, role_name):
+        print(f"attaching {role_name} to {instance_prof_name}")
+
+        try:
+            response = cls.iam.add_role_to_instance_profile(InstanceProfileName=instance_prof_name,\
+                    RoleName=role_name)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "":
+                print("---Policy already attached? skip for now.---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']['Code']}---")
+
+            return
+
+        print(f"Attached {role_name} to {instance_prof_name}")
 
     @classmethod
     def create_instance_profile(cls, name):
