@@ -11,3 +11,6 @@ if __name__ == "__main__":
     chd.destroy_instance_profile("web-serv-prof")
     chd.destroy_instance("WebServ")
     chd.destroy_security_group("web-serv-sg")
+
+    chd.destroy_rds_instance("rds-is-cool")
+    chd.destroy_security_group("rds-sg")

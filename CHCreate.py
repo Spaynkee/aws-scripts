@@ -187,3 +187,58 @@ class CHCreate(CHBase):
             return
 
         print(f"Allowed {port} for SG {group_id}")
+
+    @classmethod
+    def create_rds_instance(cls, db_instance_id, sg_name):
+        print(f"creating rds instance {db_instance_id}")
+
+        db_sg = cls.get_security_group_by_name(sg_name)
+
+        try:
+            response = cls.rds.create_db_instance(DBInstanceIdentifier=db_instance_id,\
+                    AllocatedStorage=20,\
+                    DBName="Lstats",\
+                    Engine="mysql",
+                    StorageType="gp2",
+                    MasterUsername=cls.db_user,\
+                    MasterUserPassword=cls.db_password,\
+                    VpcSecurityGroupIds=[db_sg],\
+                    DBInstanceClass="db.t2.micro")
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == "EntityAlreadyExists":
+                print("---Instance already exists? Skip for now.---")
+            elif e.response['Error']['Code'] == "InvalidParameterValue":
+                print(f"---{e.response['Error']}---")
+            elif e.response['Error']['Code'] == "InvalidParameterCombination":
+                print(f"---{e.response['Error']}---")
+            else:
+                print(f"---Unhandled error: {e.response['Error']}---")
+
+            return
+
+        print(f"Created db instance.")
+
+    @classmethod
+    def create_config(cls, file_name):
+        print(f"Updating the config file named {file_name}")
+
+        # get the instance
+        endpoint = cls.get_rds_endpoint('rds-is-cool')
+        # Read in the file
+        with open(f'{file_name}', 'r') as file :
+              filedata = file.read()
+
+              # Replace the target string
+              filedata = filedata.replace('placeholder', endpoint)
+
+              # Write the file out again
+              with open(f'{file_name}', 'w') as file:
+                    file.write(filedata)
+
+        # upload to s3
+        cls.upload_file_to_bucket(file_name)
+        print(f"Updated {file_name} and stored in bucket.")
+        
+    # need a function that updates our local config file, then uploads it to a bucket. Also one that updats the rust version and does the same.
+    # then we add pulling config files in the user data.

@@ -142,3 +142,21 @@ class CHDelete(CHBase):
             return
         print("Deleted security group.")
         return
+
+    @classmethod
+    def destroy_rds_instance(cls, db_instance_id):
+        print(f"Terminating rds Instance {db_instance_id}")
+            
+        try:
+            cls.rds.delete_db_instance(DBInstanceIdentifier=db_instance_id,\
+                    SkipFinalSnapshot=True)
+        except ClientError as e:
+            if e.response['Error']['Code'] == "EntityDoesNotExist":
+                print(f"Couldn't terminate instance '{db_instance_id}', skip for now?")
+            else:
+                print(f"Unhandled error: {e.response['Error']['Code']}")
+            return
+        return
+        
+        print("Terminated Instance")
+        return
