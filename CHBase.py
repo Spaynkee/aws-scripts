@@ -1,10 +1,9 @@
-# Base class that has all properties and info shared with the other class.
 import boto3
 import time
 import configparser
 
 class CHBase():
-    ami = "ami-09246ddb00c7c4fef" # linux-2 64bit Might parameterize this later
+    ami = "ami-09246ddb00c7c4fef" # linux-2 64bit
     iam = boto3.client('iam')
     ec2res = boto3.resource("ec2")
     ec2client = boto3.client("ec2")
@@ -23,7 +22,6 @@ class CHBase():
 
     @classmethod
     def get_instance_id(cls, name, status):
-        #returns an instance id based on passed name
         instances = cls.get_instances(status)
 
         # wait up to 30 seconds for an instance id
@@ -71,8 +69,15 @@ class CHBase():
 
     @classmethod
     def get_rds_endpoint(cls, db_identifier):
-        #returns info about our rds?
         res = cls.rds.describe_db_instances(DBInstanceIdentifier=db_identifier)
+
+        if len(res['DBInstances']) > 0:
+            while "Endpoint" not in res['DBInstances'][0]:
+                time.sleep(10)
+                res = cls.rds.describe_db_instances(DBInstanceIdentifier=db_identifier)
+        else:
+            return ""
+
         return res['DBInstances'][0]['Endpoint']['Address']
 
     @classmethod

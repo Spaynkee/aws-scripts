@@ -223,22 +223,16 @@ class CHCreate(CHBase):
     def create_config(cls, file_name):
         print(f"Updating the config file named {file_name}")
 
-        # get the instance
+        # get the endpoint
         endpoint = cls.get_rds_endpoint('rds-is-cool')
-        # Read in the file
         with open(f'{file_name}', 'r') as file :
-              filedata = file.read()
+            filedata = file.read()
 
-              # Replace the target string
-              filedata = filedata.replace('placeholder', endpoint)
+            filedata = filedata.replace('placeholder', endpoint)
 
-              # Write the file out again
-              with open(f'{file_name}', 'w') as file:
-                    file.write(filedata)
+            with open(f'{file_name}', 'w') as file:
+                file.write(filedata)
 
         # upload to s3
         cls.upload_file_to_bucket(file_name)
         print(f"Updated {file_name} and stored in bucket.")
-        
-    # need a function that updates our local config file, then uploads it to a bucket. Also one that updats the rust version and does the same.
-    # then we add pulling config files in the user data.
