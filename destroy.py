@@ -1,4 +1,10 @@
-from CHDelete import CHDelete
+""" destroy.py
+
+    This script undoes everything that create.py does. It removes all the resources created so
+    I don't have to pay for them anymore.
+
+"""
+from ch_delete import CHDelete
 
 if __name__ == "__main__":
     chd = CHDelete()

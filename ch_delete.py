@@ -1,17 +1,33 @@
-from CHBase import CHBase
-from botocore.exceptions import ClientError
+""" ch_delete.py
+
+    This class has several methods that wrap aws api calls, as well as some error handling.
+    It inherits from the ch_base class.
+
+"""
+
 import time
 import os
+from botocore.exceptions import ClientError # type: ignore
+from ch_base import CHBase
 
 class CHDelete(CHBase):
+    """ All methods of this class delete aws resources or have otherwise destructive functions.
+
+    """
     def __init__(self):
         CHBase.__init__(self)
 
     @classmethod
-    def destroy_role(cls, name):
+    def destroy_role(cls, name: str):
+        """ This wraps the iam.delete_role api call and deletes a role with the specified name.
+
+            Args:
+                name: the name of the role to be created
+
+        """
         print("Deleting role")
         try:
-            response = cls.iam.delete_role(RoleName=name)
+            cls.iam.delete_role(RoleName=name)
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("Instance role didn't exist, skip for now.")
@@ -21,14 +37,21 @@ class CHDelete(CHBase):
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
 
-        print(f"Destroyed role")
+        print("Destroyed role")
 
     @classmethod
-    def detach_role_policy(cls, role_name, policy_arn):
+    def detach_role_policy(cls, role_name: str, policy_arn: str):
+        """ This wraps the iam.detach_role_policy api call and removes a policy from a role.
+
+            Args:
+                role_name: the name of the role the policy is removed from.
+                policy_arn: the arn of the policy being detached from the role.
+
+        """
         print("removing policy from role.")
 
         try:
-            response = cls.iam.detach_role_policy(RoleName=role_name,PolicyArn=policy_arn)
+            cls.iam.detach_role_policy(RoleName=role_name,PolicyArn=policy_arn)
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("---Policy already removed? skip for now.---")
@@ -40,11 +63,19 @@ class CHDelete(CHBase):
         print(f"Removed {policy_arn} from {role_name}")
 
     @classmethod
-    def remove_role_from_instance_profile(cls, instance_prof_name, role_name):
+    def remove_role_from_instance_profile(cls, instance_prof_name: str, role_name: str):
+        """ This wraps the iam.remove_role_from_instance_profile api call, which removes a role from
+            an instance profile.
+
+            Args:
+                instance_prof_name: the name of the instance profile the role is removed from.
+                role_name: the name of the role being removed from the instance profile.
+
+        """
         print(f"removing {role_name} from {instance_prof_name}")
 
         try:
-            res = cls.iam.remove_role_from_instance_profile(InstanceProfileName=instance_prof_name,\
+            cls.iam.remove_role_from_instance_profile(InstanceProfileName=instance_prof_name,\
                     RoleName=role_name)
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
@@ -58,9 +89,16 @@ class CHDelete(CHBase):
 
     @classmethod
     def destroy_policy(cls, policy_arn):
+        """ This wraps the iam.delete_polcy api call and deletes a custom policy
+            with the specified policy name.
+
+            Args:
+                policy_name: the name of the policy to be deleted.
+
+        """
         print(f"Deleting policy {policy_arn}")
         try:
-            response = cls.iam.delete_policy(PolicyArn=policy_arn)
+            cls.iam.delete_policy(PolicyArn=policy_arn)
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("Policy didn't exist, skip for now.")
@@ -68,23 +106,37 @@ class CHDelete(CHBase):
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
 
-        print(f"Destroyed policy")
+        print("Destroyed policy")
 
     @classmethod
-    def destroy_instance_profile(cls, name):
+    def destroy_instance_profile(cls, name: str):
+        """ This wraps the iam.delete_instance_profile api call, which deletes an instance profile.
+
+            Args:
+                name: the name of the instance profile to be deleted.
+
+        """
         print("Deleting instance profile")
         try:
-            response = cls.iam.delete_instance_profile(InstanceProfileName=name)
+            cls.iam.delete_instance_profile(InstanceProfileName=name)
         except ClientError as e:
             if e.response['Error']['Code'] == "NoSuchEntity":
                 print("Instance Profile didn't exist, skip for now.")
             else:
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
-        print(f"Deleted profile")
+        print("Deleted profile")
 
     @classmethod
-    def destroy_instance_key_pair(cls, name):
+    def destroy_instance_key_pair(cls, name: str):
+        """ This wraps the ec2.client.delete_key_pair api call, which deletes a key pair.
+
+            This function also deletes a .pem file from the .ssh directory if it exists.
+
+            Args:
+                name: the name of the key pair to be deleted.
+
+        """
         print("Deleting key pair for instance.")
         try:
             cls.ec2client.delete_key_pair(KeyName=name)
@@ -102,13 +154,17 @@ class CHDelete(CHBase):
         return
 
     @classmethod
-    def destroy_instance(cls, name):
-        # We have to get a list of instances, and get the right id so we can terminate.
-        # might want to see if any instances exist at all, and if not then just skip this.
+    def destroy_instance(cls, name: str):
+        """ This wraps the ec2.resource.Instance.terminate api call, which terminates an instance.
+
+            Args:
+                name: the name of the instance being terminated.
+
+        """
         instance_id = cls.get_instance_id(name, 'running')
 
         print(f"Terminating Instance '{instance_id}'")
-            
+
         try:
             cls.ec2res.Instance(instance_id).terminate()
         except ClientError as e:
@@ -117,14 +173,18 @@ class CHDelete(CHBase):
             else:
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
-        return
-        
+
         print("Terminated Instance")
         return
 
     @classmethod
-    def destroy_security_group(cls, name):
-        # This fails if the instance is still running. Have to make sure the instance is terminated first.
+    def destroy_security_group(cls, name: str):
+        """ This wraps the ec2.client.delete_security_group api call, which deletes a security group
+
+            Args:
+                name: the name of the security group to be deleted
+
+        """
         print(f"Deleting security group {name}")
         try:
             cls.ec2client.delete_security_group(GroupName=name)
@@ -132,7 +192,7 @@ class CHDelete(CHBase):
             if e.response['Error']['Code'] == "InvalidGroup.NotFound":
                 print(f"Security group {name} didn't exist, skip for now.")
             elif e.response['Error']['Code'] == "DependencyViolation":
-                print(f"Security group in use by instance. Maybe it hasn't terminated yet?")
+                print("Security group in use by instance. Maybe it hasn't terminated yet?")
                 print("\nWe'll wait a bit and try again")
                 # we should wait a couple seconds and try again.
                 time.sleep(5)
@@ -144,9 +204,15 @@ class CHDelete(CHBase):
         return
 
     @classmethod
-    def destroy_rds_instance(cls, db_instance_id):
+    def destroy_rds_instance(cls, db_instance_id: str):
+        """ This wraps the rds.client.delete_db_instance api call.
+
+            Args:
+                db_instance_id: the id of the db instance that will be deleted.
+
+        """
         print(f"Terminating rds Instance {db_instance_id}")
-            
+
         try:
             cls.rds.delete_db_instance(DBInstanceIdentifier=db_instance_id,\
                     SkipFinalSnapshot=True)
@@ -156,7 +222,6 @@ class CHDelete(CHBase):
             else:
                 print(f"Unhandled error: {e.response['Error']['Code']}")
             return
-        return
-        
-        print("Terminated Instance")
+
+        print("Terminated rds instance")
         return

@@ -1,5 +1,11 @@
-from CHCreate import CHCreate
+""" create.py
+
+    This script creates a number of aws resources and configures everything needed to run a website
+    with a database on said resources.
+"""
+
 import time
+from ch_create import CHCreate
 
 if __name__ == "__main__":
     chc = CHCreate()
